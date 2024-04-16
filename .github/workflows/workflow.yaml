@@ -65,39 +65,40 @@ jobs:
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
 
-      - name: Create EC2 instance from ECR image
-        run: |
-          # Fetch the latest image URL from the environment
-          IMAGE_URL=$(echo $image | cut -d '=' -f 2)
+      # - name: Create EC2 instance from ECR image
+      #   run: |
+      #     # Fetch the latest image URL from the environment
+      #     IMAGE_URL=$(echo $image | cut -d '=' -f 2)
           
-          # Use the AWS CLI to launch an EC2 instance from the ECR image
-          aws ec2 run-instances \
-            --image-id ami-0395649fbe870727e \
-            --instance-type t2.micro \
-            --key-name test-key \
-            --subnet-id subnet-062781701c96e2edc \
-            --security-group-ids sg-0607989d1c625956f \
-            --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=EC2-Instance}]'
+      #     # Use the AWS CLI to launch an EC2 instance from the ECR image
+      #     aws ec2 run-instances \
+      #       --image-id ami-0395649fbe870727e \
+      #       --instance-type t2.micro \
+      #       --key-name test-key \
+      #       --subnet-id subnet-062781701c96e2edc \
+      #       --security-group-ids sg-0607989d1c625956f \
+      #       --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=EC2-Instance}]'
 
-      - name: Get EC2 instance IP
-        id: get-ec2-ip
-        run: |
-          INSTANCE_ID=$(aws ec2 describe-instances \
-            --filters "Name=tag:Name,Values=your-instance-name" \
-            --query "Reservations[].Instances[].InstanceId" \
-            --output text)
-          EC2_IP=$(aws ec2 describe-instances \
-            --instance-ids $INSTANCE_ID \
-            --query "Reservations[].Instances[].PublicIpAddress" \
-            --output text)
-          echo "EC2 IP address: $EC2_IP"
-          echo "EC2_PUBLIC_IP=$EC2_IP" >> $GITHUB_ENV
+      # - name: Get EC2 instance IP
+      #   id: get-ec2-ip
+      #   run: |
+      #     INSTANCE_ID=$(aws ec2 describe-instances \
+      #       --filters "Name=tag:Name,Values=your-instance-name" \
+      #       --query "Reservations[].Instances[].InstanceId" \
+      #       --output text)
+      #     EC2_IP=$(aws ec2 describe-instances \
+      #       --instance-ids $INSTANCE_ID \
+      #       --query "Reservations[].Instances[].PublicIpAddress" \
+      #       --output text)
+      #     echo "EC2 IP address: $EC2_IP"
+      #     echo "EC2_PUBLIC_IP=$EC2_IP" >> $GITHUB_ENV
 
       - name: SSH into EC2 instance and run Docker container
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ env.EC2_PUBLIC_IP }}
-          username: test_user
+          # host: ${{ env.EC2_PUBLIC_IP }}
+          host: ec2-35-94-114-216.us-west-2.compute.amazonaws.com
+          username: ec2-user
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           port: 22
           script: |
