@@ -72,7 +72,7 @@ jobs:
           
           # Use the AWS CLI to launch an EC2 instance from the ECR image
           aws ec2 run-instances \
-            --image-id "$IMAGE_URL" \
+            --image-id ${{ steps.build-image.outputs.image }} \
             --instance-type t2.micro \
             --key-name test-key \
             --subnet-id subnet-062781701c96e2edc \
