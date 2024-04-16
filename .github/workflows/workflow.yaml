@@ -91,12 +91,12 @@ jobs:
             --query "Reservations[].Instances[].PublicIpAddress" \
             --output text)
           echo "EC2 IP address: $EC2_IP"
-          echo "::set-env name=EC2_PUBLIC_IP::$EC2_IP"
+          echo "EC2_PUBLIC_IP=$EC2_IP" >> $GITHUB_ENV
 
       - name: SSH into EC2 instance and run Docker container
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ env.EC2_PUBLIC_IP }} # Використовуйте змінну, що містить IP-адресу EC2 інстансу
+          host: ${{ env.EC2_PUBLIC_IP }}
           username: test_user
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           port: 22
