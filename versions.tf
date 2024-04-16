@@ -8,5 +8,8 @@ terraform {
     }
   }
 
-  backend "s3" {}
+  backend "s3" {
+    bucket = "learn-cdktf-lambda-hello-name20240409131517887200000001"
+    region = "us-west-2"
+  }
 }

@@ -1,132 +1,199 @@
-name: Docker image build and publish
+name: Deploy to Amazon ECS
+
 on:
-  workflow_dispatch:
-    inputs:
-      path_to_dockerfile:
-        description: Path to the dockerfile (default = 'Dockerfile')
-        default: "e2e-test/artifact.dockerfile"
-        type: string
-      docker_build_dir:
-        description: Docker build directory (default = '.')
-        default: "e2e-test"
-        type: string
-      image_tag:
-        description: Tag to apply to images.
-        type: string
-        default: snapshot-artifact
-      lifecycle_policy_file:
-        description: Path to the lifecycle policy JSON file (default = 'policy.json')
-        default: "e2e-test/policy.json"
-        type: string
-      backend_s3_bucket:
-        description: Name of the S3bucket for Terraform backend
-        default: "terraform-backend-primary-region"
-        type: string
-      backend_iam_role:
-        description: Name of the Terraform backend assumable IAM Role
-        default: "workload-assumable-role"
-        type: string
-      github_iam_role:
-        description: Name of the IAM Role for adding access to ECR repo
-        default: "github-actions-role"
-        type: string
-      aws_account_id:
-        description: AWS Account ID
-        default: "590183902405"
-        type: string
-      aws_region:
-        description: Target AWS Region
-        default: "us-west-2"
-        type: string
-      backend_dynamodb_table:
-        description: DynamoDB table for State lock
-        default: "terraform-backend-ddb"
-        type: string
+  push:
+    branches:
+      - master
 
+env:
+  AWS_REGION: "us-west-2"                   # set this to your preferred AWS region, e.g. us-west-1
+  ECR_REPOSITORY: "github-test"           # set this to your Amazon ECR repository name
+  ECS_SERVICE: "test-service"                 # set this to your Amazon ECS service name
+  ECS_CLUSTER: "test-cluster"                 # set this to your Amazon ECS cluster name
+  ECS_TASK_DEFINITION: "task-definition-test:1" # set this to the path to your Amazon ECS task definition
+                                               # file, e.g. .aws/task-definition.json
+  CONTAINER_NAME: MY_CONTAINER_NAME           # set this to the name of the container in the
+                                               # containerDefinitions section of your task definition
 
-# concurrency required to avoid terraform lock contention during ECR provisioning
-concurrency: ci-${{ github.repository }}-docker-pipeline
-  
 jobs:
-  docker:
+  deploy:
+    name: Deploy
     runs-on: ubuntu-latest
-
-    permissions:
-      id-token: write
-      contents: read
-
-    outputs:
-      image_tag: ${{ steps.build-publish.outputs.image_tag }}
-      full_image: ${{ steps.build-publish.outputs.full_image }}
+    environment: production
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@0e613a0980cbf65ed5b322eb7a1e075d28913a83
         with:
-          role-to-assume: arn:aws:iam::${{ inputs.aws_account_id }}:role/github-actions-rmodi
-          aws-region: ${{ inputs.aws_region }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_wrapper: false
-
-      - name: prepare ECR repo name based on the Github repository
-        shell: bash
-        run: |
-          set -eux
-          # lowercase the name
-          repo="${AWS_ECR_TEST,,}"
-
-          # replace / with _
-          echo "ECR_REPO_NAME=${repo//\//github-test}" >> $GITHUB_ENV
-
-      - name: TF init
-        shell: bash
-        run: |
-          set -eux
-          terraform init -upgrade -reconfigure \
-            -backend-config='skip_metadata_api_check=true' \
-            -backend-config='skip_region_validation=true' \
-            -backend-config='skip_credentials_validation=true' \
-            -backend-config='region=${{ inputs.aws_region }}' \
-            -backend-config='bucket=${{ inputs.backend_s3_bucket }}' \
-            -backend-config='key=docker-ecr/terraform-${{ env.ECR_REPO_NAME }}.tfstate' \
-            -backend-config='dynamodb_table=${{ inputs.backend_dynamodb_table }}' \
-            -backend-config='role_arn=arn:aws:iam::${{ inputs.aws_account_id }}:role/${{ inputs.backend_iam_role }}'
-        working-directory: ${{ github.action_path }}
-
-      - name: Create ECR repo [TF apply]
-        shell: bash
-        run: |
-          set -eux
-          terraform apply \
-            -var 'repository_name=${{ env.ECR_REPO_NAME }}' \
-            -var 'lifecycle_policy=${{ inputs.lifecycle_policy_file }}' \
-            -var 'iam_role=arn:aws:iam::${{ inputs.aws_account_id }}:role/${{ inputs.github_iam_role }}' \
-            -var 'aws_account_id=${{ inputs.aws_account_id }}' \
-            -auto-approve
-        working-directory: ${{ github.action_path }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          registries: ${{ inputs.aws_account_id }}
-          mask-password: "true" # see: https://github.com/aws-actions/amazon-ecr-login#docker-credentials
+        uses: aws-actions/amazon-ecr-login@62f4f872db3836360b72999f4b87f1ff13310f3a
 
       - name: Build, tag, and push image to Amazon ECR
-        id: build-publish
-        shell: bash
+        id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ env.ECR_REPO_NAME }}
-          IMAGE_TAG: ${{ inputs.image_tag }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build "${{ inputs.docker_build_dir }}" -f "${{ inputs.path_to_dockerfile }}" -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-          echo "IMAGE $IMAGE_TAG is pushed to $ECR_REGISTRY/$ECR_REPOSITORY"
-          echo "image_tag=$IMAGE_TAG" 
-          echo "full_image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          # Build a docker container and
+          # push it to ECR so that it can
+          # be deployed to ECS.
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@c804dfbdd57f713b6c079302a4c01db7017a36fc
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@df9643053eda01f169e64a0e60233aacca83799a
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+# name: Docker image build and publish
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       path_to_dockerfile:
+#         description: Path to the dockerfile (default = 'Dockerfile')
+#         default: "e2e-test/artifact.dockerfile"
+#         type: string
+#       docker_build_dir:
+#         description: Docker build directory (default = '.')
+#         default: "e2e-test"
+#         type: string
+#       image_tag:
+#         description: Tag to apply to images.
+#         type: string
+#         default: snapshot-artifact
+#       lifecycle_policy_file:
+#         description: Path to the lifecycle policy JSON file (default = 'policy.json')
+#         default: "e2e-test/policy.json"
+#         type: string
+#       backend_s3_bucket:
+#         description: Name of the S3bucket for Terraform backend
+#         default: "terraform-backend-primary-region"
+#         type: string
+#       backend_iam_role:
+#         description: Name of the Terraform backend assumable IAM Role
+#         default: "workload-assumable-role"
+#         type: string
+#       github_iam_role:
+#         description: Name of the IAM Role for adding access to ECR repo
+#         default: "github-actions-role"
+#         type: string
+#       aws_account_id:
+#         description: AWS Account ID
+#         default: "590183902405"
+#         type: string
+#       aws_region:
+#         description: Target AWS Region
+#         default: "us-west-2"
+#         type: string
+#       backend_dynamodb_table:
+#         description: DynamoDB table for State lock
+#         default: "terraform-backend-ddb"
+#         type: string
+
+
+# # concurrency required to avoid terraform lock contention during ECR provisioning
+# concurrency: ci-${{ github.repository }}-docker-pipeline
+  
+# jobs:
+#   docker:
+#     runs-on: ubuntu-latest
+
+#     permissions:
+#       id-token: write
+#       contents: read
+
+#     outputs:
+#       image_tag: ${{ steps.build-publish.outputs.image_tag }}
+#       full_image: ${{ steps.build-publish.outputs.full_image }}
+
+#     steps:
+#       - uses: actions/checkout@v3
+
+#       - name: Configure AWS Credentials
+#         uses: aws-actions/configure-aws-credentials@v2
+#         with:
+#           role-to-assume: arn:aws:iam::${{ inputs.aws_account_id }}:role/github-actions-rmodi
+#           aws-region: ${{ inputs.aws_region }}
+
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v2
+#         with:
+#           terraform_wrapper: false
+
+#       - name: prepare ECR repo name based on the Github repository
+#         shell: bash
+#         run: |
+#           set -eux
+#           # lowercase the name
+#           repo="${AWS_ECR_TEST,,}"
+
+#           # replace / with _
+#           echo "ECR_REPO_NAME=${repo//\//github-test}" >> $GITHUB_ENV
+
+#       - name: TF init
+#         shell: bash
+#         run: |
+#           set -eux
+#           terraform init -upgrade -reconfigure \
+#             -backend-config='skip_metadata_api_check=true' \
+#             -backend-config='skip_region_validation=true' \
+#             -backend-config='skip_credentials_validation=true' \
+#             -backend-config='region=${{ inputs.aws_region }}' \
+#             -backend-config='bucket=${{ inputs.backend_s3_bucket }}' \
+#             -backend-config='key=docker-ecr/terraform-${{ env.ECR_REPO_NAME }}.tfstate' \
+#             -backend-config='dynamodb_table=${{ inputs.backend_dynamodb_table }}' \
+#             -backend-config='role_arn=arn:aws:iam::${{ inputs.aws_account_id }}:role/${{ inputs.backend_iam_role }}'
+#         working-directory: ${{ github.action_path }}
+
+#       - name: Create ECR repo [TF apply]
+#         shell: bash
+#         run: |
+#           set -eux
+#           terraform apply \
+#             -var 'repository_name=${{ env.ECR_REPO_NAME }}' \
+#             -var 'lifecycle_policy=${{ inputs.lifecycle_policy_file }}' \
+#             -var 'iam_role=arn:aws:iam::${{ inputs.aws_account_id }}:role/${{ inputs.github_iam_role }}' \
+#             -var 'aws_account_id=${{ inputs.aws_account_id }}' \
+#             -auto-approve
+#         working-directory: ${{ github.action_path }}
+
+#       - name: Login to Amazon ECR
+#         id: login-ecr
+#         uses: aws-actions/amazon-ecr-login@v1
+#         with:
+#           registries: ${{ inputs.aws_account_id }}
+#           mask-password: "true" # see: https://github.com/aws-actions/amazon-ecr-login#docker-credentials
+
+#       - name: Build, tag, and push image to Amazon ECR
+#         id: build-publish
+#         shell: bash
+#         env:
+#           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+#           ECR_REPOSITORY: ${{ env.ECR_REPO_NAME }}
+#           IMAGE_TAG: ${{ inputs.image_tag }}
+#         run: |
+#           docker build "${{ inputs.docker_build_dir }}" -f "${{ inputs.path_to_dockerfile }}" -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+#           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+#           echo "IMAGE $IMAGE_TAG is pushed to $ECR_REGISTRY/$ECR_REPOSITORY"
+#           echo "image_tag=$IMAGE_TAG" 
+#           echo "full_image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
