@@ -65,6 +65,18 @@ jobs:
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
 
+      - name: Create EC2 instance and run Docker container
+        run: |
+          # Use AWS CLI to create an EC2 instance
+          aws ec2 run-instances --image-id ami-0c101f26f147fa7fd --instance-type t2.micro --key-name keypair-az1
+
+          # Wait for the instance to be created and get its ID
+          sleep 30
+          instance_id=$(aws ec2 describe-instances --query "Reservations[0].Instances[0].InstanceId" --output text)
+
+          # Run Docker container on the EC2 instance
+          ssh  ec2-user@${instance_id} "docker run -d -p 80:80 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
 # name: Docker image build and publish
 # on:
 #   workflow_dispatch:
