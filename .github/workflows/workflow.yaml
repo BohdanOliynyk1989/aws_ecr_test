@@ -65,17 +65,19 @@ jobs:
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
 
-      - name: Create EC2 instance and run Docker container
+      - name: Create EC2 instance from ECR image
         run: |
-          # Use AWS CLI to create an EC2 instance
-          aws ec2 run-instances --image-id ami-0c101f26f147fa7fd --instance-type t2.micro --key-name keypair-az1
-
-          # Wait for the instance to be created and get its ID
-          sleep 30
-          instance_id=$(aws ec2 describe-instances --query "Reservations[0].Instances[0].InstanceId" --output text)
-
-          # Run Docker container on the EC2 instance
-          ssh  ec2-user@${instance_id} "docker run -d -p 80:80 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          # Fetch the latest image URL from the environment
+          IMAGE_URL=$(echo $image | cut -d '=' -f 2)
+          
+          # Use the AWS CLI to launch an EC2 instance from the ECR image
+          aws ec2 run-instances \
+            --image-id $IMAGE_URL \
+            --instance-type t2.micro \
+            --key-name test-key \
+            --subnet-id subnet-062781701c96e2edc \
+            --security-group-ids sg-0607989d1c625956f \
+            --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=EC2-Instance}]'
 
 # name: Docker image build and publish
 # on:
