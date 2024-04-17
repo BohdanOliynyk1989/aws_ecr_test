@@ -116,9 +116,11 @@ jobs:
             AWS_PASSWORD=$(aws ecr get-login-password --region us-west-2)
             echo "$AWS_PASSWORD" | docker login -u AWS --password-stdin 590183902405.dkr.ecr.us-west-2.amazonaws.com
 
+            sudo systemctl stop nginx
             docker pull 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
             
             docker run --rm -p 8080:80 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
+            sudo systemctl start nginx
 
 # sudo yum install -y httpd mod_ssl
 # sudo systemctl stop nginx
