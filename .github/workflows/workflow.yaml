@@ -127,17 +127,7 @@ jobs:
               LoadModule mpm_prefork_module modules/mod_mpm_prefork.so
 
               <VirtualHost *:80>
-                  DocumentRoot /var/www/html
-                  <Directory /var/www/html>
-                      Options FollowSymLinks
-                      AllowOverride Limit Options FileInfo
-                      Require all granted
-                  </Directory>
-                  <Directory /var/www/html/wp-content>
-                      Options FollowSymLinks
-                      Require all granted
-                  </Directory>
-
+                  ProxyRequests On
                   ProxyPass / http://localhost:80/
                   ProxyPassReverse / http://localhost:80/
               </VirtualHost>
