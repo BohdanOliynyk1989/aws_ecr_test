@@ -93,6 +93,12 @@ jobs:
       #     echo "EC2 IP address: $EC2_IP"
       #     echo "EC2_PUBLIC_IP=$EC2_IP" >> $GITHUB_ENV
 
+
+      - name: Get image name from GitHub output
+        run: |
+          IMAGE_NAME=$(grep -oP '(?<=image=).*' $GITHUB_OUTPUT)
+          echo "Image name: $IMAGE_NAME"
+
       - name: SSH into EC2 instance and run Docker container
         uses: appleboy/ssh-action@master
         with:
@@ -108,7 +114,7 @@ jobs:
             sudo systemctl enable docker
             sudo systemctl start docker
             sudo usermod -a -G docker ec2-user
-            docker run -d -p 80:80 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+            docker run -d -p 80:80 --name ${{ env.CONTAINER_NAME }} $IMAGE_NAME
 
 # name: Docker image build and publish
 # on:
