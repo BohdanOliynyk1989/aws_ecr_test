@@ -110,7 +110,7 @@ jobs:
             sudo usermod -a -G docker ec2-user
 
             AWS_PASSWORD=$(aws ecr get-login-password --region us-west-2)
-            docker login -u AWS -p $AWS_PASSWORD 590183902405.dkr.ecr.us-west-2.amazonaws.com
+            docker login -u AWS -p $AWS_PASSWORD
 
             docker pull 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
             docker run --rm 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
