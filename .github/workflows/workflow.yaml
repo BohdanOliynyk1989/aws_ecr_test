@@ -95,9 +95,6 @@ jobs:
 
       - name: SSH into EC2 instance and run Docker container
         uses: appleboy/ssh-action@master
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
         with:
           # host: $EC2_IP
           host: 35.94.114.216
@@ -135,11 +132,11 @@ jobs:
               }
             EOF'
             sudo systemctl stop nginx
-            docker pull $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
+            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
 
             docker stop ${{ env.CONTAINER_NAME }}
             docker rm ${{ env.CONTAINER_NAME }}
-            docker run -p 3000:3000 --name ${{ env.CONTAINER_NAME }} $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
+            docker run -p 3000:3000 --name ${{ env.CONTAINER_NAME }} ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
 
             sudo systemctl restart nginx
 
