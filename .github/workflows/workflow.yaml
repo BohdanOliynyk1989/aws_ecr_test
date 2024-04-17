@@ -118,7 +118,7 @@ jobs:
 
             docker pull 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
             
-            docker run --rm -p 80:80 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
+            docker run --rm -p 8080:80 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
 
 # sudo yum install -y httpd mod_ssl
 # sudo systemctl stop nginx
