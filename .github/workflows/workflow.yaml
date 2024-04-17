@@ -127,7 +127,7 @@ jobs:
               LoadModule mpm_prefork_module modules/mod_mpm_prefork.so
 
               <VirtualHost *:80>
-                  ProxyRequests On
+                  ProxyPreserveHost On
                   ProxyPass / http://localhost:80/
                   ProxyPassReverse / http://localhost:80/
               </VirtualHost>
