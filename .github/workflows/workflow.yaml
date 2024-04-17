@@ -119,6 +119,8 @@ jobs:
             docker pull 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
             
             sudo yum install -y nginx
+            sudo systemctl enable nginx
+            sudo systemctl start nginx
 
             sudo tee /etc/nginx/conf.d/docker-proxy.conf <<EOF
             server {
@@ -135,7 +137,6 @@ jobs:
             }
             EOF
 
-            sudo systemctl start nginx
             sudo systemctl reload nginx
 
             docker run --rm -p 80:80 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
