@@ -118,9 +118,12 @@ jobs:
 
             docker pull 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
             
-            sudo yum install -y httpd mod_ssl
-            sudo systemctl enable httpd
-            sudo systemctl start httpd
+            sudo -i
+            sudo apt-get update
+            sudo apt-get upgrade -y
+            sudo apt-get install -y apache2 apache2-utils ssl-cert
+            sudo systemctl enable apache2
+            sudo systemctl start apache2
 
             sudo bash -c 'cat <<EOF > /etc/httpd/conf/httpd.conf
               <VirtualHost *:80>
@@ -142,8 +145,10 @@ jobs:
             # vim: syntax=apache ts=4 sw=4 sts=4 sr noet
             EOF'
 
-            sudo systemctl reload httpd
-            sudo systemctl restart httpd
+            cd /etc/apache2/sites-available
+            sudo a2ensite 000-default
+            sudo systemctl reload apache2
+            sudo systemctl restart apache2
 
             docker run --rm -p 80:80 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
 
