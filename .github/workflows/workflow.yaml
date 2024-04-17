@@ -118,26 +118,34 @@ jobs:
 
             docker pull 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
             
-            sudo yum install -y nginx
-            sudo systemctl enable nginx
-            sudo systemctl start nginx
+            sudo yum install -y apache2 apache2-utils ssl-cert
+            sudo systemctl enable apache2
+            sudo systemctl start apache2
 
-            sudo tee /etc/nginx/conf.d/docker-proxy.conf <<EOF
-            server {
-                listen 80;
-                server_name localhost;
+            sudo bash -c 'cat <<EOF > /etc/apache2/sites-available/000-default.conf
+              <VirtualHost *:80>
+                  DocumentRoot /var/www/html
+                  <Directory /var/www/html>
+                      Options FollowSymLinks
+                      AllowOverride Limit Options FileInfo
+                      DirectoryIndex index.php
+                      Require all granted
+                  </Directory>
+                  <Directory /var/www/html/wp-content>
+                      Options FollowSymLinks
+                      Require all granted
+                  </Directory>
 
-                location / {
-                  proxy_pass http://590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638:80;
-                  proxy_set_header Host $host;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto $scheme;
-                }
-            }
-            EOF
+                  ProxyPass / http://localhost:80/
+                  ProxyPassReverse / http://localhost:80/
+              </VirtualHost>
+            # vim: syntax=apache ts=4 sw=4 sts=4 sr noet
+            EOF'
 
-            sudo systemctl reload nginx
+            cd /etc/apache2/sites-available
+            sudo a2ensite 000-default
+            sudo systemctl reload apache2
+            sudo systemctl restart apache2
 
             docker run --rm -p 80:80 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
 
