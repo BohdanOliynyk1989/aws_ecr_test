@@ -95,6 +95,9 @@ jobs:
 
       - name: SSH into EC2 instance and run Docker container
         uses: appleboy/ssh-action@master
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
         with:
           # host: $EC2_IP
           host: 35.94.114.216
@@ -132,41 +135,13 @@ jobs:
               }
             EOF'
             sudo systemctl stop nginx
-            docker pull 590183902405.dkr.ecr.us-west-2.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+            docker pull $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
 
             docker stop ${{ env.CONTAINER_NAME }}
             docker rm ${{ env.CONTAINER_NAME }}
-            docker run -p 3000:3000 --name ${{ env.CONTAINER_NAME }} 590183902405.dkr.ecr.us-west-2.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-            sudo systemctl start nginx
+            docker run -p 3000:3000 --name ${{ env.CONTAINER_NAME }} $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
+
             sudo systemctl restart nginx
-
-# sudo yum install -y httpd mod_ssl
-# sudo systemctl stop nginx
-
-# sudo sed -i 's/#\s*LoadModule mpm_prefork_module modules\/mod_mpm_prefork.so/LoadModule mpm_prefork_module modules\/mod_mpm_prefork.so/' /etc/httpd/conf/httpd.conf
-# sudo systemctl enable httpd
-
-# sudo bash -c 'cat <<EOF > /etc/httpd/conf/httpd.conf
-#   LoadModule mpm_prefork_module modules/mod_mpm_prefork.so
-#   LoadModule proxy_module modules/mod_proxy.so
-#   LoadModule proxy_http_module modules/mod_proxy_http.so
-
-#   <VirtualHost *:80>
-#       ProxyPass / http://localhost:80/
-#       ProxyPassReverse / http://localhost:80/
-#   </VirtualHost>
-#   # vim: syntax=apache ts=4 sw=4 sts=4 sr noet
-# EOF'
-
-
-# sudo systemctl start httpd
-# systemctl status httpd.service
-# journalctl -xeu httpd.service
-# sudo systemctl reload httpd
-# sudo systemctl restart httpd
-
-
-
 
 
 # name: Docker image build and publish
