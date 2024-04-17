@@ -109,7 +109,7 @@ jobs:
             sudo systemctl start docker
             sudo usermod -a -G docker ec2-user
             docker pull 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:$IMAGE_TAG
-            docker run -d -p 80:80 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:$IMAGE_TAG
+            docker run --rm 80:80 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:$IMAGE_TAG
 
 # name: Docker image build and publish
 # on:
