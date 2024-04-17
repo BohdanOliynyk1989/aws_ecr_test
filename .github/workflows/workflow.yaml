@@ -117,7 +117,27 @@ jobs:
             echo "$AWS_PASSWORD" | docker login -u AWS --password-stdin 590183902405.dkr.ecr.us-west-2.amazonaws.com
 
             docker pull 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
-            docker run --rm 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
+            
+            sudo yum install -y nginx
+
+            sudo tee /etc/nginx/conf.d/docker-proxy.conf <<EOF
+            server {
+                listen 80;
+                server_name localhost;
+
+                location / {
+                    proxy_pass http://590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                }
+            }
+            EOF
+
+            sudo systemctl reload nginx
+
+            docker run --rm -p 8080:80 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
 
 # name: Docker image build and publish
 # on:
