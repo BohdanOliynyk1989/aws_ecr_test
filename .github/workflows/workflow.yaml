@@ -96,8 +96,9 @@ jobs:
 
       - name: Get image name from GitHub output
         run: |
-          IMAGE_NAME=$(grep -oP '(?<=image=).*' $GITHUB_OUTPUT)
+          IMAGE_NAME=$(grep -oP 'image=\K[^ ]+' $GITHUB_OUTPUT)
           echo "Image name: $IMAGE_NAME"
+        shell: bash
 
       - name: SSH into EC2 instance and run Docker container
         uses: appleboy/ssh-action@master
