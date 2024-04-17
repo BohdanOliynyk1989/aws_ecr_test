@@ -119,7 +119,7 @@ jobs:
             sudo systemctl stop nginx
             docker pull 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:6a301bca2d4e39880d93fb46b3f526aa5e65641c
             
-            docker run -p 3000:80 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:6a301bca2d4e39880d93fb46b3f526aa5e65641c
+            docker run -p 3000:3000 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:6a301bca2d4e39880d93fb46b3f526aa5e65641c
             sudo systemctl start nginx
 
 # sudo yum install -y httpd mod_ssl
