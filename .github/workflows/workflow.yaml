@@ -125,9 +125,10 @@ jobs:
 
             sudo bash -c 'cat <<EOF > /etc/httpd/conf/httpd.conf
               LoadModule mpm_prefork_module modules/mod_mpm_prefork.so
+              LoadModule proxy_module modules/mod_proxy.so
+              LoadModule proxy_http_module modules/mod_proxy_http.so
 
               <VirtualHost *:80>
-                  ProxyPreserveHost On
                   ProxyPass / http://localhost:80/
                   ProxyPassReverse / http://localhost:80/
               </VirtualHost>
