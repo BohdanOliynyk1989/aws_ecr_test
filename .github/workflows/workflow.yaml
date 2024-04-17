@@ -109,9 +109,12 @@ jobs:
             sudo systemctl start docker
             sudo usermod -a -G docker ec2-user
 
-            aws configure
+            aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws configure set default.region us-west-2
+
             AWS_PASSWORD=$(aws ecr get-login-password --region us-west-2)
-            docker login -u AWS -p $AWS_PASSWORD 590183902405.dkr.ecr.us-west-2.amazonaws.com
+            echo "$AWS_PASSWORD" | docker login -u AWS --password-stdin 590183902405.dkr.ecr.us-west-2.amazonaws.com
 
             docker pull 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
             docker run --rm 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
