@@ -134,7 +134,9 @@ jobs:
             sudo systemctl stop nginx
             docker pull 590183902405.dkr.ecr.us-west-2.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
 
-            docker run -p 3000:3000 590183902405.dkr.ecr.us-west-2.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+            docker stop ${{ env.CONTAINER_NAME }}
+            docker rm ${{ env.CONTAINER_NAME }}
+            docker run -p 3000:3000 --name ${{ env.CONTAINER_NAME }} 590183902405.dkr.ecr.us-west-2.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
             sudo systemctl start nginx
             sudo systemctl restart nginx
 
