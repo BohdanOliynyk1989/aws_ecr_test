@@ -96,7 +96,8 @@ jobs:
 
       - name: Get image name from GitHub output
         run: |
-          IMAGE_NAME=$(grep -oP 'image=\K[^ ]+' $GITHUB_OUTPUT)
+          cat $GITHUB_OUTPUT | grep -oP '(?<=image=).*' > image_name.txt
+          IMAGE_NAME=$(cat image_name.txt)
           echo "Image name: $IMAGE_NAME"
         shell: bash
 
