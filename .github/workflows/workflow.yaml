@@ -119,7 +119,7 @@ jobs:
             docker pull 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
             
             sudo yum install -y httpd mod_ssl
-            sudo nano /etc/httpd/conf/httpd.conf
+
             sudo sed -i 's/#\s*LoadModule mpm_prefork_module modules\/mod_mpm_prefork.so/LoadModule mpm_prefork_module modules\/mod_mpm_prefork.so/' /etc/httpd/conf/httpd.conf
             sudo systemctl enable httpd
             sudo systemctl start httpd
@@ -127,6 +127,7 @@ jobs:
             journalctl -xeu httpd.service
 
             sudo bash -c 'cat <<EOF > /etc/httpd/conf/httpd.conf
+              LoadModule mpm_prefork_module modules/mod_mpm_prefork.so
               <VirtualHost *:80>
                   DocumentRoot /var/www/html
                   <Directory /var/www/html>
