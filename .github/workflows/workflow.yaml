@@ -108,6 +108,9 @@ jobs:
             sudo systemctl enable docker
             sudo systemctl start docker
             sudo usermod -a -G docker ec2-user
+
+            aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 590183902405.dkr.ecr.us-west-2.amazonaws.com
+
             docker pull 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
             docker run --rm 590183902405.dkr.ecr.us-west-2.amazonaws.com/github-test:2b1971a3b249eaf931c000b2f7558cbb91f52638
 
